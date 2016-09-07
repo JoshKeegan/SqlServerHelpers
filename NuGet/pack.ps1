@@ -6,6 +6,7 @@ if($env:APPVEYOR_REPO_BRANCH -eq "release")
 	
 	Write-Host "Generating nuspec"
 	nuget spec $root\SqlServerHelpers\bin\Release\SqlServerHelpers.dll
+	cp $root\SqlServerHelpers\bin\Release\SqlServerHelpers.nuspec $root\NuGet\SqlServerHelpers.nuspec
 
 	Write-Host "Setting .nuspec version tag to $versionStr"
 
