@@ -9,6 +9,7 @@ artifacts:
   - path: SqlServerHelpers\bin\Release\SqlServerHelpers.dll
     name: SqlServerHelpers.dll
   - path: '**\SqlServerHelpers*.nupkg'
+  - path: NuGet\SqlServerHelpers.nuspec
 
 # PowerShell script to deploy to NuGet (runs after any unit tests, if they pass)
 after_test:
