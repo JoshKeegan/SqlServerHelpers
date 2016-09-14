@@ -91,6 +91,12 @@ namespace SqlServerHelpers.ExtensionMethods
             return blob;
         }
 
+        public static Guid GetGuid(this SqlDataReader reader, string fieldName)
+        {
+            object field = reader[fieldName];
+            return (Guid)field;
+        }
+
         //returns null for null fields rather than String.Empty
         public static string GetString(this SqlDataReader reader, string fieldName)
         {
