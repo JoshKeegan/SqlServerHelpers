@@ -97,6 +97,13 @@ namespace SqlServerHelpers.ExtensionMethods
             return (Guid)field;
         }
 
+        public static Guid GetGuidFromString(this SqlDataReader reader, string fieldName)
+        {
+            object field = reader[fieldName];
+            string str = (string) field;
+            return new Guid(str);
+        }
+
         //returns null for null fields rather than String.Empty
         public static string GetString(this SqlDataReader reader, string fieldName)
         {
