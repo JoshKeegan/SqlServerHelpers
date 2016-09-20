@@ -67,7 +67,31 @@ namespace SqlServerHelpers.ExtensionMethods
         public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
             IEnumerable<long> values, SqlDbTypeSize typeSize)
         {
-            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, "dbo.TableType_Generic_BigInt");
+            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
+        }
+
+        public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
+            IEnumerable<object> values, SqlDbTypeSize typeSize, bool nullable = true)
+        {
+            // Since we don't do anything with the sizes, all table types get declared as max length.
+            //  It wouldn't make sense to try and use a char(max) for something that should have a normal
+            //  fixed length (e.g. char(3)), so treat all fixed length strings as their variable length equivelants
+            switch (typeSize.SqlDbType)
+            {
+                case SqlDbType.Char:
+                    typeSize = new SqlDbTypeSize(SqlDbType.VarChar, typeSize.Size);
+                    break;
+                case SqlDbType.NChar:
+                    typeSize = new SqlDbTypeSize(SqlDbType.NVarChar, typeSize.Size);
+                    break;
+            }
+
+            return parameters.addWithValue(paramName, values, typeSize, getTableTypeName(typeSize, nullable));
+        }
+
+        private static string getTableTypeName(SqlDbTypeSize typeSize, bool nullable)
+        {
+            return String.Format("dbo.TableType_Generic_{0}{1}", typeSize.SqlDbType, nullable ? "_Nullable" : "");
         }
 
         private static SqlParameter addWithValue(this SqlParameterCollection parameters, string paramName,
@@ -126,7 +150,7 @@ namespace SqlServerHelpers.ExtensionMethods
 
             // SqlMetaData can only work with the following DbTypes (from https://msdn.microsoft.com/en-us/library/ms127243(v=vs.110).aspx):
             //  Binary, Char, Image, NChar, Ntext, NVarChar, Text, VarBinary, VarChar
-            //  Ite will get strongly typed by SQL Server later because of the table type being specified.
+            //  It will get strongly typed by SQL Server later because of the table type being specified.
             //  Just let it infer it for now
             // TODO: Could write our own logic here based on typeSize.SqlDbType?? Don't know if there would be any real benefit though as
             //  the limitations of SqlMetaData would never let us get the types right anyway so SQL Server will always coerce them :s
