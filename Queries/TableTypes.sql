@@ -6,6 +6,16 @@
 		Josh Keegan 20/09/2016
 */
 
+CREATE TYPE dbo.TableType_Generic_Int AS TABLE
+(
+	v int NOT NULL
+);
+
+CREATE TYPE dbo.TableType_Generic_Int_Nullable AS TABLE
+(
+	v int NULL
+);
+
 CREATE TYPE dbo.TableType_Generic_BigInt AS TABLE
 (
 	v bigint NOT NULL
