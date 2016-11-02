@@ -78,6 +78,8 @@ BEGIN
 			WHEN 'Time' THEN 'Time'
 			WHEN 'DateTime2' THEN 'DateTime2'
 			WHEN 'DateTimeOffset' THEN 'DateTimeOffset'
+			/* Anything not in the above list (e.g. Geography) isn't in System.Data.SqlDbType, leave the decision to the user */
+			ELSE 'Unknown (' + DATA_TYPE + ')'
 		END AS sqlDbType,
 		CHARACTER_MAXIMUM_LENGTH AS maxLength
 	FROM ##InformationSchemaColumns;
