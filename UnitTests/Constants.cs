@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,8 +16,7 @@ namespace UnitTests
 {
     public static class Constants
     {
-        public const string DATABASE_CONNECTION_STRING =
-            //@"Server=josh-pc; Database=KLog; User ID=klogDemoUser; pwd=wow_much_security";
-            @"Server=(local)\SQL2016;Database=SqlServerHelpers;User ID=sa;Password=Password12!";
+        public static readonly string DATABASE_CONNECTION_STRING =
+            ConfigurationManager.ConnectionStrings["db"].ConnectionString;
     }
 }
