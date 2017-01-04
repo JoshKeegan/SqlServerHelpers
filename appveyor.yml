@@ -2,11 +2,14 @@ version: 0.1.{build}
 
 configuration: Release
 
-before_build:
-  - nuget restore
- 
+# Start SQL Server 2016
 services:
   - mssql2016
+
+# Restore NuGet packages & set up SQL Server for the tests
+before_build:
+  - nuget restore
+  - ps: .\AppVeyorSetupSqlServer.ps1
 
 artifacts:
   - path: SqlServerHelpers\bin\Release\SqlServerHelpers.dll
