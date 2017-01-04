@@ -4,6 +4,9 @@ configuration: Release
 
 before_build:
   - nuget restore
+ 
+services:
+  - mssql2016
 
 artifacts:
   - path: SqlServerHelpers\bin\Release\SqlServerHelpers.dll

@@ -16,6 +16,7 @@ namespace UnitTests
     public static class Constants
     {
         public const string DATABASE_CONNECTION_STRING =
-            "Server=josh-pc; Database=KLog; User ID=klogDemoUser; pwd=wow_much_security";
+            //@"Server=josh-pc; Database=KLog; User ID=klogDemoUser; pwd=wow_much_security";
+            @"Server=(local)\SQL2016;Database=master;User ID=sa;Password=Password12!";
     }
 }
