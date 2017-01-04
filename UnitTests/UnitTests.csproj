@@ -56,6 +56,7 @@
     <Compile Include="EnumerableParameterTests.cs" />
     <Compile Include="Regression\Bug1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TimeConversionTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

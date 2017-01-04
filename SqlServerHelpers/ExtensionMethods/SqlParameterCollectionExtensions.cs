@@ -13,6 +13,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 using Microsoft.SqlServer.Server;
 
 namespace SqlServerHelpers.ExtensionMethods
@@ -162,8 +163,20 @@ namespace SqlServerHelpers.ExtensionMethods
                 return null;
             }
 
+            // If we're converting times to UTC before storing them & these are DateTimes, convert to UTC now
+            if (Settings.TimesStoredInUtc && values[0] is DateTime)
+            {
+                object[] utcValues = new object[values.Length];
+                for (int i = 0; i < values.Length; i++)
+                {
+                    DateTime dt = (DateTime) values[i];
+                    utcValues[i] = dt.ToUniversalTime();
+                }
+                values = utcValues;
+            }
+
             IEnumerable<object> convertedValues;
-            SqlMetaData valueMetaData = calculateSqlMetaData(enumerableValues, typeSize, out convertedValues);
+            SqlMetaData valueMetaData = calculateSqlMetaData(values, typeSize, out convertedValues);
             return convertedValues.Select(value =>
             {
                 SqlDataRecord record = new SqlDataRecord(valueMetaData);
