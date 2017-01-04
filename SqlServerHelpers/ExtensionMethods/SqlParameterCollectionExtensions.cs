@@ -148,14 +148,7 @@ namespace SqlServerHelpers.ExtensionMethods
                 return null;
             }
 
-            // SqlMetaData can only work with the following DbTypes (from https://msdn.microsoft.com/en-us/library/ms127243(v=vs.110).aspx):
-            //  Binary, Char, Image, NChar, Ntext, NVarChar, Text, VarBinary, VarChar
-            //  It will get strongly typed by SQL Server later because of the table type being specified.
-            //  Just let it infer it for now
-            // TODO: Could write our own logic here based on typeSize.SqlDbType?? Don't know if there would be any real benefit though as
-            //  the limitations of SqlMetaData would never let us get the types right anyway so SQL Server will always coerce them :s
-            //SqlMetaData valueMetaData = new SqlMetaData("v", typeSize.SqlDbType, typeSize.Size);
-            SqlMetaData valueMetaData = SqlMetaData.InferFromValue(values.First(), "v");
+            SqlMetaData valueMetaData = typeSize.ToSqlMetaData();
             return values.Select(value =>
             {
                 SqlDataRecord record = new SqlDataRecord(valueMetaData);
