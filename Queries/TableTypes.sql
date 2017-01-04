@@ -6,6 +6,48 @@
 		Josh Keegan 20/09/2016
 */
 
+IF TYPE_ID('dbo.TableType_Generic_DateTime') IS NOT NULL
+	DROP TYPE dbo.TableType_Generic_DateTime;
+CREATE TYPE dbo.TableType_Generic_DateTime AS TABLE
+(
+	v datetime NOT NULL
+);
+
+IF TYPE_ID('dbo.TableType_Generic_DateTime_Nullable') IS NOT NULL
+	DROP TYPE dbo.TableType_Generic_DateTime_Nullable;
+CREATE TYPE dbo.TableType_Generic_DateTime_Nullable AS TABLE
+(
+	v datetime NULL
+);
+
+IF TYPE_ID('dbo.TableType_Generic_DateTime2') IS NOT NULL
+	DROP TYPE dbo.TableType_Generic_DateTime2;
+CREATE TYPE dbo.TableType_Generic_DateTime2 AS TABLE
+(
+	v datetime2 NOT NULL
+);
+
+IF TYPE_ID('dbo.TableType_Generic_DateTime2_Nullable') IS NOT NULL
+	DROP TYPE dbo.TableType_Generic_DateTime2_Nullable;
+CREATE TYPE dbo.TableType_Generic_DateTime2_Nullable AS TABLE
+(
+	v datetime2 NULL
+);
+
+IF TYPE_ID('dbo.TableType_Generic_Date') IS NOT NULL
+	DROP TYPE dbo.TableType_Generic_Date;
+CREATE TYPE dbo.TableType_Generic_Date AS TABLE
+(
+	v date NOT NULL
+);
+
+IF TYPE_ID('dbo.TableType_Generic_Date_Nullable') IS NOT NULL
+	DROP TYPE dbo.TableType_Generic_Date_Nullable;
+CREATE TYPE dbo.TableType_Generic_Date_Nullable AS TABLE
+(
+	v date NULL
+);
+
 IF TYPE_ID('dbo.TableType_Generic_Int') IS NOT NULL
 	DROP TYPE dbo.TableType_Generic_Int;
 CREATE TYPE dbo.TableType_Generic_Int AS TABLE

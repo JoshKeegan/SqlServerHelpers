@@ -57,8 +57,8 @@ namespace SqlServerHelpers
             Size = size;
         }
 
-        // Public Methods
-        public SqlMetaData ToSqlMetaData(string name = "v")
+        // Internal Methods
+        internal bool tryToSqlMetaData(string name, out SqlMetaData metaData)
         {
             // SqlMetaData can only work with the following DbTypes (from https://msdn.microsoft.com/en-us/library/ms127243(v=vs.110).aspx):
             //  Binary, Char, Image, NChar, Ntext, NVarChar, Text, VarBinary, VarChar
@@ -69,47 +69,46 @@ namespace SqlServerHelpers
             //  BigInt, Bit, DateTime, DateTimeOffset, Decimal, Float, Int, Money, NVarChar, Real, SmallInt, Time, TinyInt, 
             //  UniqueIdentifier, VarBinary, Variant, Xml
 
-            // Combined with the documented types, this gives an allowed list of:
-            //  BigInt, Binary, Bit, Char, DateTime, DateTimeOffset, Decimal, Float, Image, Int, Money, NChar, Ntext, 
-            //  NVarChar, Real, SmallInt, Text, Time, TinyInt, UniqueIdentifier, VarBinary, VarChar, Variant, Xml
-            
-            // The following is based on the above list, the observed behaviour of SqlMetaData.InferFromValue
-            //  and some educated guesses:
+            // So this method tries to convert types where possible to the first list, except
+            //  where it would be preferable to let SqlMetaData.InferFromValue handle it to get a type from the 
+            //  second list
+
+            bool success = false;
             SqlDbType type = SqlDbType;
             int size = Size;
             switch (type)
             {
-                case SqlDbType.SmallDateTime:
-                    type = SqlDbType.DateTime;
+                // Any input type already accepted is fine
+                case SqlDbType.Binary:
+                case SqlDbType.Char:
+                case SqlDbType.Image:
+                case SqlDbType.NChar:
+                case SqlDbType.NText:
+                case SqlDbType.NVarChar:
+                case SqlDbType.Text:
+                case SqlDbType.VarBinary:
+                case SqlDbType.VarChar:
+                    success = true;
                     break;
-                case SqlDbType.SmallMoney:
-                    type = SqlDbType.Money;
-                    break;
-                case SqlDbType.Timestamp: // Note that timestamp has been renamed to rowversion in SQL Server 2008
+                // Note that timestamp has been renamed to rowversion in SQL Server 2008
+                case SqlDbType.Timestamp: 
                     type = SqlDbType.Binary;
                     size = 8; // https://msdn.microsoft.com/en-GB/library/ms182776.aspx
+                    success = true;
                     break;
+                // This is a guess & is untested
                 case SqlDbType.Udt:
-                    type = SqlDbType.VarBinary; // This is a guess & is untested
+                    type = SqlDbType.VarBinary; 
+                    success = true;
                     break;
+                // Structured is used to send DataTables from .NET to SQL Server as a User-defined table type
                 case SqlDbType.Structured:
-                    // Structured is used to send DataTables from .NET to SQL Server as a User-defined table type
                     throw new InvalidOperationException(
                         "Cannot use Structured SqlDbType in SqlMetaData and there is no equivelant");
-                case SqlDbType.Date:
-                    // Don't use DateTime for Date, as the full range of Date is greater
-                    // TODO: Test if datetime2 is supported. If so, use that
-                    type = SqlDbType.VarChar;
-                    break;
-                case SqlDbType.DateTime2:
-                    // TODO: Check if this is supported. Docs don't say it is & SqlMetaData.InferFromValue
-                    //  returns DateTime, but that could just be for compatibility with now deprecated versions of SQL Server,
-                    //  which we don't need to worry about
-                    type = SqlDbType.VarChar;
-                    break;
             }
 
-            return new SqlMetaData(name, type, size);
+            metaData = success ? new SqlMetaData(name, type, size) : null;
+            return success;
         }
     }
 }

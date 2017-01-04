@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -65,14 +66,9 @@ namespace SqlServerHelpers.ExtensionMethods
         #region Multiple Values
 
         public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
-            IEnumerable<long> values, SqlDbTypeSize typeSize)
-        {
-            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
-        }
-
-        public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
             IEnumerable<object> values, SqlDbTypeSize typeSize, bool nullable = true)
         {
+            // TODO: Should this logic be moved to SqlDbTypeSize.ToSqlMetaData() ??
             // Since we don't do anything with the sizes, all table types get declared as max length.
             //  It wouldn't make sense to try and use a char(max) for something that should have a normal
             //  fixed length (e.g. char(3)), so treat all fixed length strings as their variable length equivelants
@@ -87,6 +83,24 @@ namespace SqlServerHelpers.ExtensionMethods
             }
 
             return parameters.addWithValue(paramName, values, typeSize, getTableTypeName(typeSize, nullable));
+        }
+
+        public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
+            IEnumerable<long> values, SqlDbTypeSize typeSize)
+        {
+            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
+        }
+
+        public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
+            IEnumerable<int> values, SqlDbTypeSize typeSize)
+        {
+            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
+        }
+
+        public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
+            IEnumerable<DateTime> values, SqlDbTypeSize typeSize)
+        {
+            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
         }
 
         private static string getTableTypeName(SqlDbTypeSize typeSize, bool nullable)
@@ -148,13 +162,55 @@ namespace SqlServerHelpers.ExtensionMethods
                 return null;
             }
 
-            SqlMetaData valueMetaData = typeSize.ToSqlMetaData();
-            return values.Select(value =>
+            IEnumerable<object> convertedValues;
+            SqlMetaData valueMetaData = calculateSqlMetaData(enumerableValues, typeSize, out convertedValues);
+            return convertedValues.Select(value =>
             {
                 SqlDataRecord record = new SqlDataRecord(valueMetaData);
                 record.SetValues(value);
                 return record;
             });
+        }
+
+        private static SqlMetaData calculateSqlMetaData(IEnumerable<object> values, SqlDbTypeSize typeSize,
+            out IEnumerable<object> convertedValues)
+        {
+            SqlMetaData valueMetaData;
+
+            // Handle special cases where the data must be converted
+            switch (typeSize.SqlDbType)
+            {
+                // DateTime2 would get inferred as DateTime, which has a smaller range, so pass them as ISO8601 formatted strings (YYYY-MM-DDThh:mm:ss.nnnnnnn)
+                case SqlDbType.DateTime2:
+                    valueMetaData = new SqlMetaData("v", SqlDbType.Char, "YYYY-MM-DDThh:mm:ss.nnnnnnn".Length);
+                    convertedValues =
+                        values.Cast<DateTime>()
+                            .Select(dt => dt.ToString("yyyy-MM-ddTHH\\:mm\\:ss.fffffff", CultureInfo.InvariantCulture));
+                    break;
+
+                // Date would get inferred as DateTime, which has a smaller range, so pass YYYY-MM-DD strings
+                case SqlDbType.Date:
+                    valueMetaData = new SqlMetaData("v", SqlDbType.Char, 10);
+                    convertedValues =
+                        values.Cast<DateTime>().Select(dt => dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                    break;
+
+                // Not a special case
+                default:
+                    // No value conversion necessary
+                    convertedValues = values;
+
+                    // Try and convert the specified Type Size to an SqlMetaData object, but some types (e.g. Int) 
+                    //  we can't pass to the constructor, but we can let SqlMetaData infer them from the data,
+                    //  so do that.
+                    if (!typeSize.tryToSqlMetaData("v", out valueMetaData))
+                    {
+                        valueMetaData = SqlMetaData.InferFromValue(values.First(), "v");
+                    }
+                    break;
+            }
+
+            return valueMetaData;
         }
 
         #endregion
