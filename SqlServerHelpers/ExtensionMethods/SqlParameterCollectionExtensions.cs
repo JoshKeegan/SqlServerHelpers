@@ -83,34 +83,29 @@ namespace SqlServerHelpers.ExtensionMethods
                     break;
             }
 
-            return parameters.addWithValue(paramName, values, typeSize, getTableTypeName(typeSize, nullable));
+            return parameters.AddWithValue(paramName, values, typeSize, getTableTypeName(typeSize, nullable));
         }
 
         public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
             IEnumerable<long> values, SqlDbTypeSize typeSize)
         {
-            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
+            return parameters.AddWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
         }
 
         public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
             IEnumerable<int> values, SqlDbTypeSize typeSize)
         {
-            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
+            return parameters.AddWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
         }
 
         public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
             IEnumerable<DateTime> values, SqlDbTypeSize typeSize)
         {
-            return parameters.addWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
+            return parameters.AddWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
         }
 
-        private static string getTableTypeName(SqlDbTypeSize typeSize, bool nullable)
-        {
-            return String.Format("dbo.TableType_Generic_{0}{1}", typeSize.SqlDbType, nullable ? "_Nullable" : "");
-        }
-
-        private static SqlParameter addWithValue(this SqlParameterCollection parameters, string paramName,
-            IEnumerable<object> values, SqlDbTypeSize typeSize, string tableTypeName)
+        public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
+            IEnumerable<object> values, SqlDbTypeSize typeSize, string tableTypeName, string fieldName = "v")
         {
             // Validation
             if (parameters == null)
@@ -129,8 +124,12 @@ namespace SqlServerHelpers.ExtensionMethods
             {
                 throw new ArgumentNullException(nameof(tableTypeName));
             }
+            if (fieldName == null)
+            {
+                throw new ArgumentNullException(nameof(fieldName));
+            }
 
-            IEnumerable<SqlDataRecord> dataRecords = toSqlDataRecord(values, typeSize);
+            IEnumerable<SqlDataRecord> dataRecords = toSqlDataRecord(values, typeSize, fieldName);
             SqlParameter param = new SqlParameter(paramName, SqlDbType.Structured, -1)
             {
                 TypeName = tableTypeName,
@@ -140,18 +139,26 @@ namespace SqlServerHelpers.ExtensionMethods
             return parameters.Add(param);
         }
 
+        private static string getTableTypeName(SqlDbTypeSize typeSize, bool nullable)
+        {
+            return String.Format("dbo.TableType_Generic_{0}{1}", typeSize.SqlDbType, nullable ? "_Nullable" : "");
+        }
+
         /// <summary>
         /// Takes an IEnumerable of values equivelant to a single SQL Server types (int => int, long => bigint etc...) 
         /// and returns an IEnumerable&lt;SqlDataRecord&gt; representing them
         /// </summary>
         private static IEnumerable<SqlDataRecord> toSqlDataRecord(IEnumerable<object> enumerableValues,
-            SqlDbTypeSize typeSize)
+            SqlDbTypeSize typeSize, string fieldName)
         {
             // Validation
             if (enumerableValues == null)
             {
                 throw new ArgumentNullException(nameof(enumerableValues));
-
+            }
+            if (fieldName == null)
+            {
+                throw new ArgumentNullException(nameof(fieldName));
             }
 
             // Optimisation: Prevent multiple enumerations
@@ -176,7 +183,7 @@ namespace SqlServerHelpers.ExtensionMethods
             }
 
             IEnumerable<object> convertedValues;
-            SqlMetaData valueMetaData = calculateSqlMetaData(values, typeSize, out convertedValues);
+            SqlMetaData valueMetaData = calculateSqlMetaData(values, typeSize, out convertedValues, fieldName);
             return convertedValues.Select(value =>
             {
                 SqlDataRecord record = new SqlDataRecord(valueMetaData);
@@ -186,7 +193,7 @@ namespace SqlServerHelpers.ExtensionMethods
         }
 
         private static SqlMetaData calculateSqlMetaData(IEnumerable<object> values, SqlDbTypeSize typeSize,
-            out IEnumerable<object> convertedValues)
+            out IEnumerable<object> convertedValues, string fieldName)
         {
             SqlMetaData valueMetaData;
 
@@ -195,7 +202,7 @@ namespace SqlServerHelpers.ExtensionMethods
             {
                 // DateTime2 would get inferred as DateTime, which has a smaller range, so pass them as ISO8601 formatted strings (YYYY-MM-DDThh:mm:ss.nnnnnnn)
                 case SqlDbType.DateTime2:
-                    valueMetaData = new SqlMetaData("v", SqlDbType.Char, "YYYY-MM-DDThh:mm:ss.nnnnnnn".Length);
+                    valueMetaData = new SqlMetaData(fieldName, SqlDbType.Char, "YYYY-MM-DDThh:mm:ss.nnnnnnn".Length);
                     convertedValues =
                         values.Cast<DateTime>()
                             .Select(dt => dt.ToString("yyyy-MM-ddTHH\\:mm\\:ss.fffffff", CultureInfo.InvariantCulture));
@@ -203,7 +210,7 @@ namespace SqlServerHelpers.ExtensionMethods
 
                 // Date would get inferred as DateTime, which has a smaller range, so pass YYYY-MM-DD strings
                 case SqlDbType.Date:
-                    valueMetaData = new SqlMetaData("v", SqlDbType.Char, 10);
+                    valueMetaData = new SqlMetaData(fieldName, SqlDbType.Char, 10);
                     convertedValues =
                         values.Cast<DateTime>().Select(dt => dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
                     break;
@@ -216,9 +223,9 @@ namespace SqlServerHelpers.ExtensionMethods
                     // Try and convert the specified Type Size to an SqlMetaData object, but some types (e.g. Int) 
                     //  we can't pass to the constructor, but we can let SqlMetaData infer them from the data,
                     //  so do that.
-                    if (!typeSize.tryToSqlMetaData("v", out valueMetaData))
+                    if (!typeSize.tryToSqlMetaData(fieldName, out valueMetaData))
                     {
-                        valueMetaData = SqlMetaData.InferFromValue(values.First(), "v");
+                        valueMetaData = SqlMetaData.InferFromValue(values.First(), fieldName);
                     }
                     break;
             }
