@@ -45,6 +45,16 @@ namespace UnitTests
 	                    (
 		                    i ASC
 	                    )
+                    );
+
+                    /* Make UDTT for TestMultiParameter */
+                    IF TYPE_ID('udtt_UnitTests_int_long') IS NOT NULL
+	                    DROP TYPE udtt_UnitTests_int_long;
+
+                    CREATE TYPE udtt_UnitTests_int_long AS TABLE
+                    (
+	                    i int NOT NULL,
+                        l bigint NOT NULL
                     );";
 
                 // Run the command
@@ -65,7 +75,10 @@ namespace UnitTests
                 // Build the command
                 command.CommandText =
                     @"/* UDTT for TestSingleParameter */
-                    DROP TYPE udtt_UnitTests_int_pk;";
+                    DROP TYPE udtt_UnitTests_int_pk;
+
+                    /* UDTT for TestMultiParameter */
+                    DROP TYPE udtt_UnitTests_int_long;";
 
                 // Run the command
                 command.Prepare();
@@ -108,6 +121,61 @@ namespace UnitTests
                 IEnumerable<int> expected = toAdd.OrderBy(i => i);
 
                 CollectionAssert.AreEqual(expected, actual);
+            }
+        }
+
+        [Test]
+        public void TestMultiParameter()
+        {
+            int[] expectedInts = new int[] { 1, 2, 3, 7, 11, -46, int.MinValue, int.MaxValue, 0 };
+            long[] expectedLongs = new long[] { -3, 2, 1, 11, 7, -46, 0, long.MaxValue, long.MinValue };
+            Assert.AreEqual(expectedInts.Length, expectedLongs.Length);
+
+            object[][] objRows = new object[expectedInts.Length][];
+            for (int i = 0; i < objRows.Length; i++)
+            {
+                objRows[i] = new object[] { expectedInts[i], expectedLongs[i] };
+            }
+
+            SqlDbTypeSize[] fieldTypeSizes = new SqlDbTypeSize[]
+            {
+                new SqlDbTypeSize(SqlDbType.Int),
+                new SqlDbTypeSize(SqlDbType.BigInt)
+            };
+
+            string[] fieldNames = new string[]
+            {
+                "i",
+                "l"
+            };
+
+            using (SqlConnection conn = new SqlConnection(Constants.DATABASE_CONNECTION_STRING))
+            using (SqlCommand command = conn.GetSqlCommand())
+            {
+                conn.Open();
+
+                // Build the command
+                command.CommandText =
+                    @"SELECT *
+                    FROM @vals";
+
+                // Make the parameters
+                command.Parameters.AddWithValue("@vals", objRows, fieldTypeSizes, "udtt_UnitTests_int_long", fieldNames);
+
+                // Run the command
+                command.Prepare();
+                SqlDataReader reader = command.ExecuteReader();
+
+                List<int> actualInts = new List<int>();
+                List<long> actualLongs = new List<long>();
+                while (reader.Read())
+                {
+                    actualInts.Add(reader.GetInt("i"));
+                    actualLongs.Add(reader.GetLong("l"));
+                }
+
+                CollectionAssert.AreEqual(expectedInts, actualInts);
+                CollectionAssert.AreEqual(expectedLongs, actualLongs);
             }
         }
     }

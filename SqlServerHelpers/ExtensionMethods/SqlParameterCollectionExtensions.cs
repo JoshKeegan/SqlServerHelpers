@@ -104,6 +104,9 @@ namespace SqlServerHelpers.ExtensionMethods
             return parameters.AddWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
         }
 
+        /// <summary>
+        /// Add a parameter for a custom User Defined Table Type (UDTT) with a single column.
+        /// </summary>
         public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
             IEnumerable<object> values, SqlDbTypeSize typeSize, string tableTypeName, string fieldName = "v")
         {
@@ -139,6 +142,45 @@ namespace SqlServerHelpers.ExtensionMethods
             return parameters.Add(param);
         }
 
+        /// <summary>
+        /// Add a parameter for a custom User Defined Table Type (UDTT) with multiple columns
+        /// </summary>
+        public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
+            IEnumerable<IEnumerable<object>> rowValues, IEnumerable<SqlDbTypeSize> fieldTypeSizes, string tableTypeName,
+            IEnumerable<string> fieldNames)
+        {
+            // Validation
+            if (paramName == null)
+            {
+                throw new ArgumentNullException(nameof(paramName));
+            }
+            if (rowValues == null)
+            {
+                throw new ArgumentNullException(nameof(rowValues));
+            }
+            if (fieldTypeSizes == null)
+            {
+                throw new ArgumentNullException(nameof(fieldTypeSizes));
+            }
+            if (tableTypeName == null)
+            {
+                throw new ArgumentNullException(nameof(tableTypeName));
+            }
+            if (fieldNames == null)
+            {
+                throw new ArgumentNullException(nameof(fieldNames));
+            }
+
+            IEnumerable<SqlDataRecord> dataRecords = toSqlDataRecord(rowValues, fieldTypeSizes, fieldNames);
+            SqlParameter param = new SqlParameter(paramName, SqlDbType.Structured, -1)
+            {
+                TypeName = tableTypeName,
+                Value = dataRecords
+            };
+
+            return parameters.Add(param);
+        }
+
         private static string getTableTypeName(SqlDbTypeSize typeSize, bool nullable)
         {
             return String.Format("dbo.TableType_Generic_{0}{1}", typeSize.SqlDbType, nullable ? "_Nullable" : "");
@@ -151,45 +193,139 @@ namespace SqlServerHelpers.ExtensionMethods
         private static IEnumerable<SqlDataRecord> toSqlDataRecord(IEnumerable<object> enumerableValues,
             SqlDbTypeSize typeSize, string fieldName)
         {
-            // Validation
-            if (enumerableValues == null)
-            {
-                throw new ArgumentNullException(nameof(enumerableValues));
-            }
-            if (fieldName == null)
-            {
-                throw new ArgumentNullException(nameof(fieldName));
-            }
-
             // Optimisation: Prevent multiple enumerations
             object[] values = enumerableValues as object[] ?? enumerableValues.ToArray();
 
+            // Convert the values array to one with one column per row (for the one value)
+            object[][] rowValues = new object[values.Length][];
+            for (int i = 0; i < values.Length; i++)
+            {
+                rowValues[i] = new object[] { values[i] };
+            }
+
+            return toSqlDataRecord(rowValues, new SqlDbTypeSize[] { typeSize }, new string[] { fieldName });
+        }
+
+        // Multi-column version of above
+        private static IEnumerable<SqlDataRecord> toSqlDataRecord(IEnumerable<IEnumerable<object>> enumerableRowsValues,
+            IEnumerable<SqlDbTypeSize> enumerableFieldTypeSizes, IEnumerable<string> enumerableFieldNames)
+        {
+            // Validation
+            if (enumerableRowsValues == null)
+            {
+                throw new ArgumentNullException(nameof(enumerableRowsValues));
+            }
+            if (enumerableFieldTypeSizes == null)
+            {
+                throw new ArgumentNullException(nameof(enumerableFieldTypeSizes));
+            }
+            if (enumerableFieldNames == null)
+            {
+                throw new ArgumentNullException(nameof(enumerableFieldNames));
+            }
+
+            // Optimisation: Prevent multiple enumerations
+            string[] fieldNames = enumerableFieldNames as string[] ?? enumerableFieldNames.ToArray();
+
+            SqlDbTypeSize[] fieldTypeSizes = enumerableFieldTypeSizes as SqlDbTypeSize[] ??
+                                             enumerableFieldTypeSizes.ToArray();
+
+            // Additional validation, check number of fields specified match
+            if (fieldNames.Length != fieldTypeSizes.Length)
+            {
+                throw new ArgumentException("Number of fields specified must all match");
+            }
+
+            IEnumerable<object>[] rowsEnumerableValues = enumerableRowsValues as IEnumerable<object>[] ??
+                                                         enumerableRowsValues.ToArray();
+            object[][] rowsValues = new object[rowsEnumerableValues.Length][];
+            for (int i = 0; i < rowsValues.Length; i++)
+            {
+                rowsValues[i] = rowsEnumerableValues[i] as object[] ?? rowsEnumerableValues[i].ToArray();
+
+                // Additional validation, check number of fields specified match
+                if (rowsValues[i].Length != fieldNames.Length)
+                {
+                    throw new ArgumentException("Number of fields specified must all match");
+                }
+            }
+
             // SQL Server expects null instead of 0 rows
-            if (!values.Any())
+            if (!rowsValues.Any())
             {
                 return null;
             }
 
-            // If we're converting times to UTC before storing them & these are DateTimes, convert to UTC now
-            if (Settings.TimesStoredInUtc && values[0] is DateTime)
+            // If we're converting times to UTC before storing them & a field is a DateTime, convert to UTC now
+            if (Settings.TimesStoredInUtc)
             {
-                object[] utcValues = new object[values.Length];
-                for (int i = 0; i < values.Length; i++)
+                List<int> dateTimeFieldIndices = new List<int>();
+                for (int i = 0; i < rowsValues[0].Length; i++)
                 {
-                    DateTime dt = (DateTime) values[i];
-                    utcValues[i] = dt.ToUniversalTime();
+                    if (rowsValues[0][i] is DateTime)
+                    {
+                        dateTimeFieldIndices.Add(i);
+                    }
                 }
-                values = utcValues;
+
+                // If there are any DateTime fields
+                if (dateTimeFieldIndices.Any())
+                {
+                    // Go through each row converting these indices to UTC
+                    for (int i = 0; i < rowsValues.Length; i++)
+                    {
+                        for (int j = 0; j < dateTimeFieldIndices.Count; j++)
+                        {
+                            DateTime dt = (DateTime) rowsValues[i][j];
+                            rowsValues[i][j] = dt.ToUniversalTime();
+                        }
+                    }
+                }
             }
 
-            IEnumerable<object> convertedValues;
-            SqlMetaData valueMetaData = calculateSqlMetaData(values, typeSize, out convertedValues, fieldName);
-            return convertedValues.Select(value =>
+            // Get values by column so we can convert them if necessary
+            object[][] columnValues = new object[rowsValues[0].Length][];
+            for (int i = 0; i < columnValues.Length; i++)
             {
-                SqlDataRecord record = new SqlDataRecord(valueMetaData);
-                record.SetValues(value);
-                return record;
-            });
+                columnValues[i] = new object[rowsValues.Length];
+
+                for (int j = 0; j < rowsValues.Length; j++)
+                {
+                    columnValues[i][j] = rowsValues[j][i];
+                }
+            }
+
+            // Calculate the SqlMetaData for each column, also converting the values at the same time (if required)
+            object[][] convertedColumnValues = new object[columnValues.Length][];
+            SqlMetaData[] columnMetaDatas = new SqlMetaData[columnValues.Length];
+            for (int i = 0; i < columnValues.Length; i++)
+            {
+                IEnumerable<object> enumerableConvertedValues;
+                columnMetaDatas[i] = calculateSqlMetaData(columnValues[i], fieldTypeSizes[i],
+                    out enumerableConvertedValues, fieldNames[i]);
+
+                // Store converted column values
+                convertedColumnValues[i] = enumerableConvertedValues as object[] ?? enumerableConvertedValues.ToArray();
+            }
+
+            // Make the SqlDataRecords
+            SqlDataRecord[] dataRecords = new SqlDataRecord[rowsValues.Length];
+            for (int i = 0; i < dataRecords.Length; i++)
+            {
+                // Make base record with meta data for all columns
+                SqlDataRecord record = new SqlDataRecord(columnMetaDatas);
+
+                // Get the data for this row
+                object[] rowData = new object[convertedColumnValues.Length];
+                for (int j = 0; j < rowData.Length; j++)
+                {
+                    rowData[j] = convertedColumnValues[j][i];
+                }
+                record.SetValues(rowData);
+
+                dataRecords[i] = record;
+            }
+            return dataRecords;
         }
 
         private static SqlMetaData calculateSqlMetaData(IEnumerable<object> values, SqlDbTypeSize typeSize,
