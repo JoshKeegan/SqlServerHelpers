@@ -67,6 +67,11 @@ namespace SqlServerHelpers.ExtensionMethods
             return double.Parse(reader[fieldName].ToString());
         }
 
+        public static decimal GetDecimal(this SqlDataReader reader, string fieldName)
+        {
+            return decimal.Parse(reader[fieldName].ToString());
+        }
+
         public static DateTime GetDateTime(this SqlDataReader reader, string fieldName)
         {
             object field = reader[fieldName];
@@ -170,6 +175,17 @@ namespace SqlServerHelpers.ExtensionMethods
                 return null;
             }
             return double.Parse(strField);
+        }
+
+        public static decimal? GetNullableDecimal(this SqlDataReader reader, string fieldName)
+        {
+            object objField = reader[fieldName];
+            if (objField == DBNull.Value)
+            {
+                return null;
+            }
+            string strField = objField.ToString();
+            return decimal.Parse(strField);
         }
 
         public static long? GetNullableLong(this SqlDataReader reader, string fieldName)
