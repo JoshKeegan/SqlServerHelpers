@@ -130,6 +130,28 @@ namespace SqlServerHelpers.ExtensionMethods
             return strField == "True";
         }
 
+        public static byte? GetNullableByte(this SqlDataReader reader, string fieldName)
+        {
+            object objField = reader[fieldName];
+            if (objField == DBNull.Value)
+            {
+                return null;
+            }
+            string strField = objField.ToString();
+            return byte.Parse(strField);
+        }
+
+        public static short? GetNullableShort(this SqlDataReader reader, string fieldName)
+        {
+            object objField = reader[fieldName];
+            if (objField == DBNull.Value)
+            {
+                return null;
+            }
+            string strField = objField.ToString();
+            return short.Parse(strField);
+        }
+
         public static int? GetNullableInt(this SqlDataReader reader, string fieldName)
         {
             string strField = reader[fieldName].ToString();
