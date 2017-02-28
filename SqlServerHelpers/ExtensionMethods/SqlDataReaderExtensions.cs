@@ -47,6 +47,11 @@ namespace SqlServerHelpers.ExtensionMethods
             return byte.Parse(reader[fieldName].ToString());
         }
 
+        public static short GetShort(this SqlDataReader reader, string fieldName)
+        {
+            return short.Parse(reader[fieldName].ToString());
+        }
+
         public static int GetInt(this SqlDataReader reader, string fieldName)
         {
             return int.Parse(reader[fieldName].ToString());
