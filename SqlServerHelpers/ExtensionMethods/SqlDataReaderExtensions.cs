@@ -62,6 +62,11 @@ namespace SqlServerHelpers.ExtensionMethods
             return long.Parse(reader[fieldName].ToString());
         }
 
+        public static float GetFloat(this SqlDataReader reader, string fieldName)
+        {
+            return float.Parse(reader[fieldName].ToString());
+        }
+
         public static double GetDouble(this SqlDataReader reader, string fieldName)
         {
             return double.Parse(reader[fieldName].ToString());
@@ -165,6 +170,17 @@ namespace SqlServerHelpers.ExtensionMethods
                 return null;
             }
             return int.Parse(strField);
+        }
+
+        public static float? GetNullableFloat(this SqlDataReader reader, string fieldName)
+        {
+            object objField = reader[fieldName];
+            if (objField == DBNull.Value)
+            {
+                return null;
+            }
+            string strField = objField.ToString();
+            return float.Parse(strField);
         }
 
         public static double? GetNullableDouble(this SqlDataReader reader, string fieldName)
