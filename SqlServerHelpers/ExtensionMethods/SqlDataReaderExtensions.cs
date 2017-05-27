@@ -83,6 +83,11 @@ namespace SqlServerHelpers.ExtensionMethods
             return getDateTime(field);
         }
 
+        public static TimeSpan GetTimeSpan(this SqlDataReader reader, string fieldName)
+        {
+            return (TimeSpan) reader[fieldName];
+        }
+
         public static DbGeography GetDbGeographyFromString(this SqlDataReader reader, string fieldName, int coordinateSystemId = -1)
         {
             // If no coordinate system ID is supplied, use the default
@@ -222,6 +227,12 @@ namespace SqlServerHelpers.ExtensionMethods
                 return null;
             }
             return getDateTime(field);
+        }
+
+        public static TimeSpan? GetNullableTimeSpan(this SqlDataReader reader, string fieldName)
+        {
+            object field = reader[fieldName];
+            return field == DBNull.Value ? null : (TimeSpan?) field;
         }
 
         #endregion

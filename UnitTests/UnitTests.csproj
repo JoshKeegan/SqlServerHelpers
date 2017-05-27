@@ -58,6 +58,7 @@
     <Compile Include="Regression\Bug1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TimeConversionTests.cs" />
+    <Compile Include="TimeSpanTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
