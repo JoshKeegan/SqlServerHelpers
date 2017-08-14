@@ -219,6 +219,16 @@ namespace SqlServerHelpers.ExtensionMethods
             return long.Parse(strField);
         }
 
+        public static Guid? GetNullableGuid(this SqlDataReader reader, string fieldName)
+        {
+            object field = reader[fieldName];
+            if (field == DBNull.Value)
+            {
+                return null;
+            }
+            return (Guid)field;
+        }
+
         public static DateTime? GetNullableDateTime(this SqlDataReader reader, string fieldName)
         {
             object field = reader[fieldName];
