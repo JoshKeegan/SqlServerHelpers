@@ -367,7 +367,24 @@ namespace SqlServerHelpers.ExtensionMethods
                     //  so do that.
                     if (!typeSize.tryToSqlMetaData(fieldName, out valueMetaData))
                     {
-                        valueMetaData = SqlMetaData.InferFromValue(values.First(), fieldName);
+                        // Note: If ever this is being reached, the data that is reaching it should be used to improve
+                        //  SqlDbTypeSize.tryToSqlMetaData, as if all of the data is NULL then we won't be able to infer
+                        //  a value and just have to use a *sensible* default 
+                        object firstValueNotNull = values.FirstOrDefault(v => v != null);
+
+                        // If we have a value that isn't null
+                        if (firstValueNotNull != null)
+                        {
+                            valueMetaData = SqlMetaData.InferFromValue(firstValueNotNull, fieldName);
+                        }
+                        // Otherwise, we don't know how to generate the SqlMetaData for this SqlDbTypeSize, and
+                        //  we don't have any values to infer it from!
+                        //  Default to NVarchar which will at least stop anything from blowing up, but could cause 
+                        //  performance issues in SQL Server.
+                        else
+                        {
+                            valueMetaData = new SqlMetaData(fieldName, SqlDbType.NVarChar, -1);
+                        }
                     }
                     break;
             }

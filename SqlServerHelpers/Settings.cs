@@ -30,5 +30,12 @@ namespace SqlServerHelpers
         /// Will automatically convert all times read from the DB from UTC to local time & vice versa when writing.
         /// </summary>
         public static bool TimesStoredInUtc = true;
+
+        /// <summary>
+        /// A method to delegate writing warning log data from within SqlServerHelpers to.
+        /// No debug messages will be included, and no errors will be logged as they will be thrown as exceptions.
+        /// Non-fatal warnings where recovery was possible, but data may not have been handled ideally would be logged.
+        /// </summary>
+        public static Logging.LogMessageWriter LogWriter = null;
     }
 }

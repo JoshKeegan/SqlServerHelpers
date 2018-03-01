@@ -55,6 +55,15 @@ namespace UnitTests
                     (
 	                    i int NOT NULL,
                         l bigint NOT NULL
+                    );
+                    
+                    /* Make UDTT for TestNullParameter */
+                    IF TYPE_ID('udtt_UnitTests_int_nullable') IS NOT NULL
+	                    DROP TYPE udtt_UnitTests_int_nullable;
+
+                    CREATE TYPE udtt_UnitTests_int_nullable AS TABLE
+                    (
+	                    i int NULL
                     );";
 
                 // Run the command
@@ -78,7 +87,10 @@ namespace UnitTests
                     DROP TYPE udtt_UnitTests_int_pk;
 
                     /* UDTT for TestMultiParameter */
-                    DROP TYPE udtt_UnitTests_int_long;";
+                    DROP TYPE udtt_UnitTests_int_long;
+
+                    /* UDTT for TestNullParameter */
+                    DROP TYPE udtt_UnitTests_int_nullable;";
 
                 // Run the command
                 command.Prepare();
@@ -178,5 +190,57 @@ namespace UnitTests
                 CollectionAssert.AreEqual(expectedLongs, actualLongs);
             }
         }
+
+        [Test]
+        public void TestNullParameter()
+        {
+            int?[] expected = new int?[] { 3, 5, 9, null };
+            testNullableInt(expected);
+        }
+
+        [Test]
+        public void TestNullParameterFirst()
+        {
+            int?[] expected = new int?[] { null, 3, 5, 9 };
+            testNullableInt(expected);
+        }
+
+        [Test]
+        public void TestNullParameterAll()
+        {
+            int?[] expected = new int?[] { null, null };
+            testNullableInt(expected);
+        }
+
+        #region Private Methods
+
+        private void testNullableInt(int?[] expected)
+        {
+            IEnumerable<object[]> objRows = expected.Select(i => new object[] { i });
+            SqlDbTypeSize[] fieldTypeSizes = new SqlDbTypeSize[]
+            {
+                new SqlDbTypeSize(SqlDbType.Int)
+            };
+            string[] fieldNames = new string[]
+            {
+                "i"
+            };
+
+            using (SqlConnection conn = new SqlConnection(Constants.DATABASE_CONNECTION_STRING))
+            using (SqlCommand command = conn.GetSqlCommand())
+            {
+                conn.Open();
+
+                // Build the command
+                command.CommandText =
+                    @"SELECT *
+                    FROM @vals";
+
+                // Make the parameters
+                command.Parameters.AddWithValue("@vals", objRows, fieldTypeSizes, "udtt_UnitTests_int_nullable", fieldNames);
+            }
+        }
+
+        #endregion
     }
 }

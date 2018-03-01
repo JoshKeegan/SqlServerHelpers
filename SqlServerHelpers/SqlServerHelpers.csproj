@@ -54,6 +54,7 @@
     <Compile Include="ExtensionMethods\SqlConnectionExtensions.cs" />
     <Compile Include="ExtensionMethods\SqlDataReaderExtensions.cs" />
     <Compile Include="ExtensionMethods\SqlParameterCollectionExtensions.cs" />
+    <Compile Include="Logging.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="SqlDbTypeSize.cs" />

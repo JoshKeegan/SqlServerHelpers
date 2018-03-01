@@ -154,5 +154,63 @@ namespace UnitTests
                 CollectionAssert.AreEqual(expected, actual);
             }
         }
+
+        [Test]
+        public void TestNullParameter()
+        {
+            int?[] expected = new int?[] { 3, 5, 9, null };
+            testNullableInt(expected);
+        }
+
+        [Test]
+        public void TestNullParameterFirst()
+        {
+            int?[] expected = new int?[] { null, 3, 5, 9 };
+            testNullableInt(expected);
+
+        }
+
+        [Test]
+        public void TestNullParameterAll()
+        {
+            int?[] expected = new int?[] { null, null };
+            testNullableInt(expected);
+
+        }
+
+        #region Private Helpers
+
+        private void testNullableInt(int?[] expected)
+        {
+            SqlDbTypeSize valueField = new SqlDbTypeSize(SqlDbType.Int);
+
+            using (SqlConnection conn = new SqlConnection(Constants.DATABASE_CONNECTION_STRING))
+            using (SqlCommand command = conn.GetSqlCommand())
+            {
+                conn.Open();
+
+                // Build the command
+                command.CommandText =
+                    @"SELECT v
+                    FROM @vals";
+
+                // Make the parameters
+                command.Parameters.AddWithValue("@vals", expected.Cast<object>(), valueField);
+
+                // Run the command
+                command.Prepare();
+                SqlDataReader reader = command.ExecuteReader();
+
+                List<int?> actual = new List<int?>();
+                while (reader.Read())
+                {
+                    actual.Add(reader.GetNullableInt("v"));
+                }
+
+                CollectionAssert.AreEqual(expected, actual);
+            }
+        }
+
+        #endregion
     }
 }
