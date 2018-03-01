@@ -87,6 +87,12 @@ namespace SqlServerHelpers.ExtensionMethods
         }
 
         public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
+            IEnumerable<Guid> values, SqlDbTypeSize typeSize)
+        {
+            return parameters.AddWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
+        }
+
+        public static SqlParameter AddWithValue(this SqlParameterCollection parameters, string paramName,
             IEnumerable<long> values, SqlDbTypeSize typeSize)
         {
             return parameters.AddWithValue(paramName, values.Cast<object>(), typeSize, getTableTypeName(typeSize, false));
