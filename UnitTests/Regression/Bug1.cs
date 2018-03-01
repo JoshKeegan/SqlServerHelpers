@@ -22,7 +22,7 @@ namespace UnitTests.Regression
         [Test]
         public void Bug1Repro()
         {
-            // Strings of lengths longer than the first were being silently trunctaed to the length of the first one
+            // Strings of lengths longer than the first were being silently truncated to the length of the first one
             //  so just test by selecting the strings back out, with some later strings being longer than the first
             string[] expected = new string[] { "abd", "abcdefg", "def", "fghjkm" };
             SqlDbTypeSize valueField = new SqlDbTypeSize(SqlDbType.VarChar);
